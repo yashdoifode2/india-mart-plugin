@@ -3,122 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Config - BuyLead Assistant</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Consolas', -apple-system, Arial, sans-serif; background: #0d0d1a; color: #e0e0e0; padding: 20px; min-height: 100vh; }
-        .container { max-width: 950px; margin: 0 auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #1a1a2e; margin-bottom: 20px; }
-        .header-left { display: flex; align-items: center; gap: 12px; }
-        .header-icon-img { width: 40px; height: 40px; object-fit: contain; border-radius: 8px; flex-shrink: 0; }
-        .header-text { display: flex; flex-direction: column; }
-        .header h1 { font-size: 22px; color: #02A699; font-weight: 700; line-height: 1.2; }
-        .header .subtitle { font-size: 11px; color: #666; margin-top: 2px; }
-        .header .version { font-size: 11px; color: #666; background: #1a1a2e; padding: 4px 10px; border-radius: 12px; border: 1px solid #2a2a3e; }
-
-        .connection-toggle { background: linear-gradient(135deg, #0f1f1e 0%, #0d1a1a 100%); border: 1px solid #02A699; border-radius: 8px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-        .connection-toggle.offline { background: linear-gradient(135deg, #1e1810 0%, #1a1508 100%); border-color: #f5a623; }
-        .connection-left { display: flex; align-items: center; gap: 12px; flex: 1; }
-        .connection-icon { font-size: 28px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #0d0d1a; border-radius: 8px; flex-shrink: 0; border: 1px solid #2a2a3e; }
-        .connection-info { flex: 1; }
-        .connection-label { font-size: 14px; font-weight: 700; color: #02A699; }
-        .connection-toggle.offline .connection-label { color: #f5a623; }
-        .connection-desc { font-size: 11px; color: #888; margin-top: 3px; }
-
-        .switch { position: relative; display: inline-block; width: 50px; height: 26px; flex-shrink: 0; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .3s; border-radius: 26px; }
-        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
-        input:checked + .slider { background-color: #02A699; }
-        input:checked + .slider:before { transform: translateX(24px); }
-
-        .tab-bar { display: flex; gap: 4px; border-bottom: 2px solid #1a1a2e; margin-bottom: 24px; padding: 0 4px; flex-wrap: wrap; }
-        .tab { padding: 10px 18px; cursor: pointer; font-weight: 600; color: #666; border-bottom: 3px solid transparent; margin-bottom: -2px; font-size: 12px; transition: all 0.2s ease; user-select: none; }
-        .tab:hover { color: #aaa; background: #1a1a2e; border-radius: 6px 6px 0 0; }
-        .tab.active { color: #02A699; border-bottom-color: #02A699; background: #0f1f1e; border-radius: 6px 6px 0 0; }
-        .tab.danger.active { color: #ef7076; border-bottom-color: #ef7076; background: #1a0f10; }
-        .tab-content { display: none; animation: fadeIn 0.2s ease; }
-        .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-        .section { background: #1a1a2e; border-radius: 8px; padding: 20px; margin-bottom: 16px; border: 1px solid #2a2a3e; }
-        .section-title { font-size: 13px; font-weight: 700; color: #02A699; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-        .section.danger .section-title { color: #ef7076; }
-        .section.danger { border-color: #3e1012; background: linear-gradient(135deg, #1e1012 0%, #1a0d10 100%); }
-        .section-desc { font-size: 11px; color: #666; margin-bottom: 16px; line-height: 1.5; }
-
-        .field { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a2a3e; }
-        .field:last-child { border-bottom: none; }
-        .field-label { flex: 1; font-size: 13px; color: #e0e0e0; padding-right: 12px; }
-        .field-label .desc { display: block; font-size: 11px; color: #666; font-weight: 400; margin-top: 3px; line-height: 1.4; }
-        .field-control { min-width: 120px; text-align: right; }
-        .field-control input[type="number"], .field-control input[type="text"], .field-control select { padding: 8px 12px; border-radius: 6px; border: 1px solid #2a2a3e; background: #0d0d1a; color: #e0e0e0; font-size: 13px; width: 120px; font-family: 'Consolas', monospace; }
-        .field-control input:focus, .field-control select:focus, .field-control textarea:focus { outline: none; border-color: #02A699; box-shadow: 0 0 0 3px rgba(2, 166, 153, 0.1); }
-        .field-control textarea { width: 100%; padding: 10px 12px; border: 1px solid #2a2a3e; border-radius: 6px; font-family: 'Consolas', monospace; font-size: 12px; min-height: 80px; resize: vertical; background: #0d0d1a; color: #e0e0e0; line-height: 1.5; }
-
-        .mode-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
-        .mode-btn { padding: 12px 8px; border: 2px solid #2a2a3e; border-radius: 8px; background: #0d0d1a; color: #888; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-align: center; }
-        .mode-btn:hover { border-color: #444; color: #e0e0e0; }
-        .mode-btn.active { border-color: #02A699; color: #02A699; background: #0f1f1e; box-shadow: 0 0 0 3px rgba(2, 166, 153, 0.1); }
-        .mode-btn.active.monitor { border-color: #888; color: #888; background: #1a1a1a; }
-        .mode-btn.active.dryrun { border-color: #f5a623; color: #f5a623; background: #1e1810; }
-        .mode-btn.active.assisted { border-color: #7c6f9e; color: #9c8fbe; background: #1a1620; }
-        .mode-btn.active.automatic { border-color: #02A699; color: #02A699; background: #0f1f1e; }
-
-        .actions { display: flex; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #1a1a2e; flex-wrap: wrap; }
-        .actions button { padding: 10px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; transition: all 0.2s ease; }
-        .actions button:disabled { opacity: 0.6; cursor: wait; }
-        .btn-primary { background: #02A699; color: white; }
-        .btn-primary:hover:not(:disabled) { background: #018f88; transform: translateY(-1px); }
-        .btn-secondary { background: #1a1a2e; color: #aaa; border: 1px solid #2a2a3e; }
-        .btn-secondary:hover:not(:disabled) { background: #2a2a3e; color: #e0e0e0; }
-        .btn-danger { background: #ef7076; color: #fff; }
-        .btn-danger:hover:not(:disabled) { background: #e05a5f; }
-        .btn-warning { background: #f5a623; color: #fff; }
-        .btn-warning:hover:not(:disabled) { background: #d4911e; }
-
-        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: white; padding: 12px 24px; border-radius: 8px; font-size: 13px; z-index: 9999; border: 1px solid #2a2a3e; box-shadow: 0 4px 24px rgba(0,0,0,0.6); max-width: 90%; text-align: center; }
-        .toast.success { border-color: #02A699; color: #02A699; }
-        .toast.error { border-color: #ef7076; color: #ef7076; }
-        .toast.warning { border-color: #f5a623; color: #f5a623; }
-        @keyframes fadeOutDown { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(20px); } }
-
-        .footer { margin-top: 20px; padding-top: 16px; border-top: 1px solid #1a1a2e; display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #444; }
-        .footer a { color: #02A699; text-decoration: none; }
-        .footer a:hover { text-decoration: underline; }
-        .credit { text-align: center; padding: 16px 0; font-size: 11px; color: #444; border-top: 1px solid #1a1a2e; margin-top: 16px; }
-        .credit a { color: #02A699; text-decoration: none; font-weight: 600; }
-
-        .keyword-count { display: inline-block; background: #0f1f1e; color: #02A699; font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-left: 8px; border: 1px solid #02A699; }
-        .info-box { background: #0f1f1e; border-left: 3px solid #02A699; padding: 12px; margin-top: 12px; border-radius: 0 6px 6px 0; font-size: 11px; color: #888; line-height: 1.6; }
-        .info-box strong { color: #02A699; }
-        .info-box.danger { background: #1e1012; border-left-color: #ef7076; color: #ffb0b0; }
-        .info-box.danger strong { color: #ef7076; }
-
-        .filter-card { background: #0d0d1a; border: 1px solid #2a2a3e; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-        .filter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #1a1a2e; }
-        .filter-name { font-size: 14px; font-weight: 700; color: #02A699; }
-        .filter-badge { font-size: 10px; padding: 3px 8px; border-radius: 10px; font-weight: 600; }
-        .filter-badge.running { background: #0f1f1e; color: #02A699; border: 1px solid #02A699; }
-        .filter-badge.idle { background: #1a1a2e; color: #666; border: 1px solid #2a2a3e; }
-        .filter-row { display: flex; gap: 8px; padding: 4px 0; font-size: 12px; color: #aaa; }
-        .filter-label { color: #666; min-width: 80px; font-weight: 600; }
-        .filter-stats { display: flex; gap: 16px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1a1a2e; font-size: 11px; color: #888; }
-        .filter-stats strong { color: #02A699; }
-        .empty-state { text-align: center; padding: 40px; color: #666; font-size: 13px; }
-        .empty-state.error { color: #ef7076; }
-        #filtersStatus { font-size: 11px; color: #666; }
-
-        .weight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .stat-box { background: #0d0d1a; border: 1px solid #2a2a3e; border-radius: 8px; padding: 20px 14px; text-align: center; }
-        .stat-box .num { font-size: 32px; font-weight: 700; color: #02A699; line-height: 1; }
-        .stat-box .lbl { font-size: 11px; color: #888; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .danger .stat-box { border-color: #3e1012; background: #1a0f10; }
-        .danger .stat-box .num { color: #ef7076; }
-
-        .danger-zone-buttons { display: flex; flex-direction: column; gap: 10px; }
-        .danger-zone-buttons button { width: 100%; padding: 14px; font-size: 13px; justify-content: center; }
-        .danger-zone-buttons button .label { display: flex; align-items: center; gap: 8px; justify-content: center; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
@@ -130,9 +15,10 @@
                     <span class="subtitle">BuyLead Assistant</span>
                 </div>
             </div>
-            <span class="version">v4.8.0</span>
+            <span class="version">v6.0.0</span>
         </div>
 
+        <!-- Connection Toggle -->
         <div class="connection-toggle" id="connectionToggle">
             <div class="connection-left">
                 <div class="connection-icon" id="configConnIcon">☁️</div>
@@ -147,18 +33,19 @@
             </label>
         </div>
 
+        <!-- Tabs -->
         <div class="tab-bar">
             <span class="tab active" data-tab="general">🎛️ General</span>
+            <span class="tab" data-tab="filters">🗄️ Filters</span>
             <span class="tab" data-tab="keywords">🔑 Keywords</span>
             <span class="tab" data-tab="scoring">🎯 Scoring</span>
             <span class="tab" data-tab="limits">📊 Limits</span>
             <span class="tab" data-tab="navigator">🔄 Navigator</span>
             <span class="tab" data-tab="popup">💬 Popup</span>
-            <span class="tab" data-tab="filters">🗄️ Supabase</span>
-            <span class="tab danger" data-tab="data">🗑️ Data Management</span>
+            <span class="tab danger" data-tab="data">🗑️ Data</span>
         </div>
 
-        <!-- GENERAL -->
+        <!-- General -->
         <div class="tab-content active" id="tab-general">
             <div class="section">
                 <div class="section-title">🎯 Operating Mode</div>
@@ -180,144 +67,126 @@
             </div>
         </div>
 
-        <!-- KEYWORDS -->
+        <!-- Filters Tab (NEW - Full CRUD) -->
+        <div class="tab-content" id="tab-filters">
+            <div class="section">
+                <div class="section-title">🗄️ Filter Management <span class="keyword-count" id="filtersCount">0</span></div>
+                <div class="section-desc">
+                    Manage Supabase filters directly. Each filter contains product keywords, negative keywords, required keywords, and location rules.
+                </div>
+                <div class="actions" style="margin-top:0;padding-top:0;border-top:none;">
+                    <button class="btn-primary" id="refreshFiltersBtn">🔄 Refresh</button>
+                    <button class="btn-primary" id="addFilterBtn">➕ Add New Filter</button>
+                    <button class="btn-warning" id="bulkSyncBtn">🔄 Bulk Sync Keywords</button>
+                </div>
+                <div id="filtersList" style="margin-top:16px;">
+                    <div class="empty-state">⏳ Loading filters...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Keywords Tab (Local + Supabase view) -->
         <div class="tab-content" id="tab-keywords">
             <div class="section">
-                <div class="section-title">📋 Product Keywords <span class="keyword-count" id="productCount">0</span></div>
-                <div class="section-desc">One per line. At least one must match.</div>
+                <div class="section-title">📋 Local Product Keywords <span class="keyword-count" id="productCount">0</span></div>
+                <div class="section-desc">One per line. Used when Supabase is OFF, or as fallback when Supabase has no keywords.</div>
                 <div class="field"><div class="field-control" style="flex:1;text-align:left;min-width:auto;"><textarea id="productKeywords" rows="6"></textarea></div></div>
             </div>
             <div class="section">
-                <div class="section-title">🚫 Negative Keywords <span class="keyword-count" id="negativeCount">0</span></div>
-                <div class="section-desc">One per line. Any match rejects the lead.</div>
+                <div class="section-title">🚫 Local Negative Keywords <span class="keyword-count" id="negativeCount">0</span></div>
                 <div class="field"><div class="field-control" style="flex:1;text-align:left;min-width:auto;"><textarea id="negativeKeywords" rows="5"></textarea></div></div>
             </div>
             <div class="section">
-                <div class="section-title">✅ Required Keywords <span class="keyword-count" id="requiredCount">0</span></div>
-                <div class="section-desc">One per line. At least one must be present.</div>
+                <div class="section-title">✅ Local Required Keywords <span class="keyword-count" id="requiredCount">0</span></div>
                 <div class="field"><div class="field-control" style="flex:1;text-align:left;min-width:auto;"><textarea id="requiredKeywords" rows="4"></textarea></div></div>
             </div>
             <div class="actions">
-                <button class="btn-primary" id="saveKeywordsBtn">💾 Save Keywords</button>
+                <button class="btn-primary" id="saveKeywordsBtn">💾 Save Local Keywords</button>
                 <button class="btn-secondary" id="resetKeywordsBtn">↺ Clear</button>
             </div>
         </div>
 
-        <!-- SCORING -->
+        <!-- Scoring -->
         <div class="tab-content" id="tab-scoring">
+            <div class="section" style="border-color:#02A699;background:linear-gradient(135deg,#0f1f1e 0%,#0d1a1a 100%);">
+                <div class="section-title">🎯 STRICT COUNTRY FILTER <span class="keyword-count" style="background:#02A699;color:#fff;">PRIMARY GATE</span></div>
+                <div class="section-desc">When enabled, leads are filtered by country BEFORE keyword matching.</div>
+                <div class="field">
+                    <div class="field-label"><strong style="color:#02A699;">Enable Strict Country Mode</strong><span class="desc">Only acquire leads from allowed countries</span></div>
+                    <div class="field-control"><label class="switch"><input type="checkbox" id="strictCountryMode"><span class="slider"></span></label></div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Allowed Countries <span class="desc">Comma-separated ISO codes (IN, US, AE)</span></div>
+                    <div class="field-control" style="flex:1;text-align:left;"><input type="text" id="allowedCountries" style="width:100%;" placeholder="IN" value="IN"></div>
+                </div>
+                <div class="field">
+                    <div class="field-label">Reject Unknown Country <span class="desc">Also reject leads with no country</span></div>
+                    <div class="field-control"><label class="switch"><input type="checkbox" id="strictCountryRejectUnknown" checked><span class="slider"></span></label></div>
+                </div>
+                <div class="info-box" id="strictCountryPreview">🌍 Strict mode OFF — all countries accepted</div>
+            </div>
+
             <div class="section">
                 <div class="section-title">🎯 Base Scoring</div>
-                <div class="section-desc">Starting score for every lead before bonuses/penalties</div>
-                <div class="field">
-                    <div class="field-label">Base Score <span class="desc">Starting value (default 50)</span></div>
-                    <div class="field-control"><input type="number" id="wBase" min="0" max="100" value="50"></div>
-                </div>
+                <div class="field"><div class="field-label">Base Score</div><div class="field-control"><input type="number" id="wBase" min="0" max="100" value="50"></div></div>
             </div>
 
             <div class="section">
                 <div class="section-title">📦 Product Keyword Weight</div>
-                <div class="section-desc">Bonus for matching product keywords</div>
-                <div class="field">
-                    <div class="field-label">Points per Keyword <span class="desc">Bonus per matched keyword</span></div>
-                    <div class="field-control"><input type="number" id="wPerProductKeyword" min="0" max="50" value="10"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Max Product Bonus <span class="desc">Cap on total keyword bonus</span></div>
-                    <div class="field-control"><input type="number" id="wMaxProductBonus" min="0" max="100" value="30"></div>
-                </div>
+                <div class="field"><div class="field-label">Points per Keyword</div><div class="field-control"><input type="number" id="wPerProductKeyword" min="0" max="50" value="10"></div></div>
+                <div class="field"><div class="field-label">Max Product Bonus</div><div class="field-control"><input type="number" id="wMaxProductBonus" min="0" max="100" value="30"></div></div>
             </div>
 
             <div class="section">
                 <div class="section-title">🌍 Country Weightage</div>
-                <div class="section-desc">Bonus/penalty based on buyer country</div>
-                <div class="field">
-                    <div class="field-label">Preferred Countries <span class="desc">Comma-separated ISO codes (IN, US, AE...)</span></div>
-                    <div class="field-control" style="flex:1;text-align:left;"><input type="text" id="preferredCountries" style="width:100%;" placeholder="IN"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Country Match Bonus <span class="desc">Points added when country matches</span></div>
-                    <div class="field-control"><input type="number" id="wCountryMatch" min="0" max="50" value="15"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Wrong Country Penalty <span class="desc">Points deducted (use negative)</span></div>
-                    <div class="field-control"><input type="number" id="pWrongCountry" min="-50" max="0" value="-20"></div>
-                </div>
+                <div class="field"><div class="field-label">Preferred Countries</div><div class="field-control" style="flex:1;text-align:left;"><input type="text" id="preferredCountries" style="width:100%;" placeholder="IN"></div></div>
+                <div class="field"><div class="field-label">Country Match Bonus</div><div class="field-control"><input type="number" id="wCountryMatch" min="0" max="50" value="15"></div></div>
+                <div class="field"><div class="field-label">Wrong Country Penalty</div><div class="field-control"><input type="number" id="pWrongCountry" min="-50" max="0" value="-20"></div></div>
             </div>
 
             <div class="section">
                 <div class="section-title">📍 State Weightage</div>
-                <div class="section-desc">Bonus/penalty based on buyer state</div>
-                <div class="field">
-                    <div class="field-label">Preferred States <span class="desc">Comma-separated (maharashtra, karnataka...)</span></div>
-                    <div class="field-control" style="flex:1;text-align:left;"><input type="text" id="preferredStates" style="width:100%;" placeholder="maharashtra"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">State Match Bonus <span class="desc">Points when state matches</span></div>
-                    <div class="field-control"><input type="number" id="wPreferredState" min="0" max="50" value="15"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Wrong State Penalty <span class="desc">Points deducted (use negative)</span></div>
-                    <div class="field-control"><input type="number" id="pWrongState" min="-50" max="0" value="-10"></div>
-                </div>
+                <div class="field"><div class="field-label">Preferred States</div><div class="field-control" style="flex:1;text-align:left;"><input type="text" id="preferredStates" style="width:100%;" placeholder="maharashtra"></div></div>
+                <div class="field"><div class="field-label">State Match Bonus</div><div class="field-control"><input type="number" id="wPreferredState" min="0" max="50" value="15"></div></div>
+                <div class="field"><div class="field-label">Wrong State Penalty</div><div class="field-control"><input type="number" id="pWrongState" min="-50" max="0" value="-10"></div></div>
             </div>
 
             <div class="section">
-                <div class="section-title">📞 Contact Availability Weightage</div>
-                <div class="section-desc">Bonus/penalty based on available contact info</div>
-                <div class="field">
-                    <div class="field-label">Mobile Available Bonus <span class="desc">Points for mobile contact</span></div>
-                    <div class="field-control"><input type="number" id="wHasMobile" min="0" max="30" value="10"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Email Available Bonus <span class="desc">Points for email contact</span></div>
-                    <div class="field-control"><input type="number" id="wHasEmail" min="0" max="30" value="8"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Phone (Landline) Bonus <span class="desc">Points for phone-only contact</span></div>
-                    <div class="field-control"><input type="number" id="wHasPhone" min="0" max="30" value="5"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">No Contact Penalty <span class="desc">Points deducted (use negative)</span></div>
-                    <div class="field-control"><input type="number" id="pNoContact" min="-50" max="0" value="-5"></div>
-                </div>
+                <div class="section-title">📞 Contact Weightage</div>
+                <div class="field"><div class="field-label">Mobile Available Bonus</div><div class="field-control"><input type="number" id="wHasMobile" min="0" max="30" value="10"></div></div>
+                <div class="field"><div class="field-label">Email Available Bonus</div><div class="field-control"><input type="number" id="wHasEmail" min="0" max="30" value="8"></div></div>
+                <div class="field"><div class="field-label">Phone Bonus</div><div class="field-control"><input type="number" id="wHasPhone" min="0" max="30" value="5"></div></div>
+                <div class="field"><div class="field-label">No Contact Penalty</div><div class="field-control"><input type="number" id="pNoContact" min="-50" max="0" value="-5"></div></div>
             </div>
 
             <div class="section">
-                <div class="section-title">📝 Requirement Detail Weight</div>
-                <div class="field">
-                    <div class="field-label">Detailed Requirement Bonus <span class="desc">Points for a long/detailed requirement</span></div>
-                    <div class="field-control"><input type="number" id="wDetailedRequirement" min="0" max="30" value="5"></div>
-                </div>
-                <div class="field">
-                    <div class="field-label">Min Length Threshold <span class="desc">Characters needed for bonus</span></div>
-                    <div class="field-control"><input type="number" id="wRequirementLengthThreshold" min="20" max="500" value="100"></div>
-                </div>
+                <div class="section-title">📝 Requirement Detail</div>
+                <div class="field"><div class="field-label">Detail Bonus</div><div class="field-control"><input type="number" id="wDetailedRequirement" min="0" max="30" value="5"></div></div>
+                <div class="field"><div class="field-label">Min Length</div><div class="field-control"><input type="number" id="wRequirementLengthThreshold" min="20" max="500" value="100"></div></div>
             </div>
 
             <div class="actions">
                 <button class="btn-primary" id="saveScoringBtn">💾 Save Scoring</button>
-                <button class="btn-secondary" id="resetScoringBtn">↺ Reset Scoring</button>
+                <button class="btn-secondary" id="resetScoringBtn">↺ Reset</button>
             </div>
         </div>
 
-        <!-- LIMITS -->
+        <!-- Limits -->
         <div class="tab-content" id="tab-limits">
             <div class="section">
                 <div class="section-title">⏱️ Rate Limits</div>
-                <div class="section-desc">Prevent excessive acquisitions</div>
                 <div class="field"><div class="field-label">Per Minute</div><div class="field-control"><input type="number" id="perMinute" min="0" max="100" value="5"></div></div>
                 <div class="field"><div class="field-label">Per Hour</div><div class="field-control"><input type="number" id="perHour" min="0" max="500" value="20"></div></div>
                 <div class="field"><div class="field-label">Per Day</div><div class="field-control"><input type="number" id="perDay" min="0" max="5000" value="50"></div></div>
                 <div class="field"><div class="field-label">Per Session</div><div class="field-control"><input type="number" id="perSession" min="0" max="1000" value="30"></div></div>
-                <div class="field"><div class="field-label">Cooldown (ms) <span class="desc">Between acquisitions</span></div><div class="field-control"><input type="number" id="cooldownMs" min="0" max="60000" step="100" value="2000"></div></div>
+                <div class="field"><div class="field-label">Cooldown (ms)</div><div class="field-control"><input type="number" id="cooldownMs" min="0" max="60000" step="100" value="2000"></div></div>
             </div>
         </div>
 
-        <!-- NAVIGATOR -->
+        <!-- Navigator -->
         <div class="tab-content" id="tab-navigator">
             <div class="section">
                 <div class="section-title">🔄 Auto-Scroll & Load</div>
-                <div class="section-desc">Automatically scroll, click "Show more", and fetch new leads</div>
                 <div class="field"><div class="field-label">Auto-Scroll Enabled</div><div class="field-control"><input type="checkbox" id="autoScroll" checked style="width:18px;height:18px;"></div></div>
                 <div class="field"><div class="field-label">Scroll Speed (px/step)</div><div class="field-control"><input type="number" id="scrollSpeed" min="100" max="2000" step="50" value="400"></div></div>
                 <div class="field"><div class="field-label">Scroll Delay (ms)</div><div class="field-control"><input type="number" id="scrollDelayMs" min="10" max="1000" step="10" value="100"></div></div>
@@ -328,45 +197,31 @@
             </div>
             <div class="section">
                 <div class="section-title">♻️ Auto-Reload</div>
-                <div class="section-desc">Reload page when no more leads are found</div>
                 <div class="field"><div class="field-label">Auto-Reload on Complete</div><div class="field-control"><input type="checkbox" id="autoReloadOnComplete" checked style="width:18px;height:18px;"></div></div>
                 <div class="field"><div class="field-label">Reload Delay (ms)</div><div class="field-control"><input type="number" id="autoReloadDelayMs" min="500" max="30000" step="500" value="2000"></div></div>
-                <div class="field"><div class="field-label">Max Reloads Per Session</div><div class="field-control"><input type="number" id="maxReloadsPerSession" min="1" max="200" value="20"></div></div>
+                <div class="field"><div class="field-label">Max Reloads/Session</div><div class="field-control"><input type="number" id="maxReloadsPerSession" min="1" max="200" value="20"></div></div>
             </div>
         </div>
 
-        <!-- POPUP -->
+        <!-- Popup -->
         <div class="tab-content" id="tab-popup">
             <div class="section">
                 <div class="section-title">💬 Popup Handling</div>
-                <div class="section-desc">Control how popups are handled during acquisition</div>
                 <div class="field"><div class="field-label">Auto-Handle Popups</div><div class="field-control"><input type="checkbox" id="autoMinimize" checked style="width:18px;height:18px;"></div></div>
                 <div class="field"><div class="field-label">Popup Timeout (ms)</div><div class="field-control"><input type="number" id="popupTimeoutMs" min="2000" max="60000" step="500" value="10000"></div></div>
-                <div class="field"><div class="field-label">Confirmation Answer <span class="desc">Response to "Do you want to contact?"</span></div><div class="field-control"><select id="confirmationAnswer"><option value="yes">YES</option><option value="no">NO</option></select></div></div>
-                <div class="field"><div class="field-label">Purchase Modal Action <span class="desc">When IndiaMART asks to buy</span></div><div class="field-control"><select id="purchaseAction"><option value="close">Auto-close</option><option value="stop">Stop acquiring</option></select></div></div>
+                <div class="field"><div class="field-label">Confirmation Answer</div><div class="field-control"><select id="confirmationAnswer"><option value="yes">YES</option><option value="no">NO</option></select></div></div>
+                <div class="field"><div class="field-label">Purchase Modal Action</div><div class="field-control"><select id="purchaseAction"><option value="close">Auto-close</option><option value="stop">Stop acquiring</option></select></div></div>
             </div>
         </div>
 
-        <!-- FILTERS -->
-        <div class="tab-content" id="tab-filters">
-            <div class="section">
-                <div class="section-title">🗄️ Active Filters from Supabase</div>
-                <div class="section-desc"><span id="filtersStatus"></span></div>
-                <div id="filtersList"><div class="empty-state">⏳ Loading filters...</div></div>
-            </div>
-            <div class="actions">
-                <button class="btn-primary" id="refreshFiltersBtn">🔄 Refresh Filters</button>
-            </div>
-        </div>
-
-        <!-- DATA MANAGEMENT -->
+        <!-- Data Management -->
         <div class="tab-content" id="tab-data">
             <div class="section">
                 <div class="section-title">📊 Supabase Table Counts</div>
-                <div class="section-desc">Live counts from your CRM database</div>
                 <div class="weight-grid">
                     <div class="stat-box"><div class="num" id="countLeads">-</div><div class="lbl">Leads</div></div>
                     <div class="stat-box"><div class="num" id="countHistory">-</div><div class="lbl">History</div></div>
+                    <div class="stat-box"><div class="num" id="countFilters">-</div><div class="lbl">Filters</div></div>
                 </div>
                 <div style="margin-top:16px;">
                     <button class="btn-primary" id="refreshCountsBtn">🔄 Refresh Counts</button>
@@ -374,37 +229,21 @@
             </div>
 
             <div class="section">
-                <div class="section-title">🧹 Local Data (Extension)</div>
-                <div class="section-desc">Clear cache and local storage — does NOT touch Supabase</div>
+                <div class="section-title">🧹 Local Data</div>
                 <div class="danger-zone-buttons">
-                    <button class="btn-warning" id="clearDupCacheBtn">🗑️ Clear Duplicate Cache</button>
-                    <button class="btn-danger" id="clearAllLocalBtn">⚠️ Clear ALL Local Data (keeps config + keywords)</button>
-                </div>
-                <div class="info-box">
-                    <strong>Clear Duplicate Cache:</strong> Removes in-memory list of seen leads. They can be re-processed.<br>
-                    <strong>Clear ALL Local Data:</strong> Wipes debug logs, stats, and cached state — keeps keywords + config.
+                    <button class="btn-warning" data-action="clearDupCache">🗑️ Clear Duplicate Cache</button>
+                    <button class="btn-danger" data-action="clearAllLocal">⚠️ Clear ALL Local Data</button>
                 </div>
             </div>
 
             <div class="section danger">
-                <div class="section-title">☢️ Supabase Data (CRM) — DANGER ZONE</div>
-                <div class="section-desc">Delete data directly from your Supabase database. These actions are permanent.</div>
-
+                <div class="section-title">☢️ Supabase Data — DANGER ZONE</div>
                 <div class="danger-zone-buttons">
-                    <button class="btn-warning" id="resetStatsBtn">🔄 Reset Filter Stats (scanned/matched/clicked → 0)</button>
-                    <button class="btn-danger" id="clearHistoryBtn">🗑️ Delete ALL Lead History</button>
-                    <button class="btn-danger" id="clearLeadsBtn">🗑️ Delete ALL Leads (⚠️ cascade deletes history)</button>
-                    <button class="btn-danger" id="clearBeforeBtn">📅 Delete Leads Before Date...</button>
-                    <button class="btn-danger" id="clearFiltersBtn">🗑️ Delete ALL Filters (⚠️ removes config)</button>
-                </div>
-
-                <div class="info-box danger">
-                    <strong>⚠️ Warning:</strong> These actions affect your CRM database immediately. No undo.<br>
-                    • <strong>Reset Filter Stats:</strong> Zero out counters<br>
-                    • <strong>Delete History:</strong> Remove all lead_history rows<br>
-                    • <strong>Delete Leads:</strong> Remove ALL leads (cascades to history)<br>
-                    • <strong>Delete Before Date:</strong> Remove leads older than a date<br>
-                    • <strong>Delete Filters:</strong> Remove all filter configurations
+                    <button class="btn-warning" data-action="resetStats">🔄 Reset Filter Stats</button>
+                    <button class="btn-danger" data-action="clearHistory">🗑️ Delete ALL Lead History</button>
+                    <button class="btn-danger" data-action="clearLeads">🗑️ Delete ALL Leads</button>
+                    <button class="btn-danger" data-action="clearBefore">📅 Delete Leads Before Date</button>
+                    <button class="btn-danger" data-action="clearFilters">🗑️ Delete ALL Filters</button>
                 </div>
             </div>
         </div>
@@ -425,6 +264,70 @@
             Developed by <a href="https://codenagpur.in" target="_blank">CodeNagpur.in</a>
         </div>
     </div>
+
+    <!-- Filter Editor Modal -->
+    <div class="modal-overlay" id="filterModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="filterModalTitle">Add New Filter</h3>
+                <button class="modal-close" id="filterModalClose">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editFilterId" value="">
+
+                <div class="field">
+                    <div class="field-label">Filter Name <span class="desc">Display name (e.g. "Skincare Serum")</span></div>
+                    <div class="field-control" style="flex:1;text-align:left;">
+                        <input type="text" id="editFilterName" style="width:100%;" placeholder="Skincare Serum">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="field-label">Client ID <span class="desc">Usually "default"</span></div>
+                    <div class="field-control" style="flex:1;text-align:left;">
+                        <input type="text" id="editClientId" style="width:100%;" value="default">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div class="field-label">Is Active <span class="desc">Only active filters are used</span></div>
+                    <div class="field-control">
+                        <label class="switch">
+                            <input type="checkbox" id="editIsActive" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section-title" style="margin-top:20px;">📦 Product Keywords</div>
+                <div class="section-desc">One per line. At least one must match (if list is not empty)</div>
+                <textarea id="editProductKeywords" class="modal-textarea" rows="6" placeholder="serum&#10;sunscreen&#10;spf&#10;cream"></textarea>
+
+                <div class="section-title" style="margin-top:16px;">🚫 Negative Keywords</div>
+                <div class="section-desc">One per line. Any match rejects the lead</div>
+                <textarea id="editNegativeKeywords" class="modal-textarea" rows="4" placeholder="used&#10;repair&#10;job"></textarea>
+
+                <div class="section-title" style="margin-top:16px;">✅ Required Keywords</div>
+                <div class="section-desc">One per line. At least one must be present</div>
+                <textarea id="editRequiredKeywords" class="modal-textarea" rows="3" placeholder="buy&#10;purchase"></textarea>
+
+                <div class="section-title" style="margin-top:16px;">🌍 Location Keywords</div>
+                <div class="section-desc">One per line. Country or state names (e.g. india, maharashtra)</div>
+                <textarea id="editLocationKeywords" class="modal-textarea" rows="3" placeholder="india&#10;maharashtra"></textarea>
+
+                <div class="info-box" style="margin-top:16px;">
+                    <strong>💡 Tip:</strong> When you save, keywords are stored in the <code>filter_config.product_names</code> AND the new <code>product_keywords</code> column (auto-synced).
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="filterModalCancel">Cancel</button>
+                <button class="btn-primary" id="filterModalSave">💾 Save Filter</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
     <script src="config.js"></script>
 </body>
 </html>

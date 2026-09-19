@@ -31,6 +31,21 @@
             </label>
         </div>
 
+        <!-- Strict Country Toggle -->
+        <div class="connection-toggle" id="strictCountryWrap">
+            <div class="connection-left">
+                <div class="connection-icon" id="strictCountryIcon">🌍</div>
+                <div class="connection-info">
+                    <div class="connection-label" id="strictCountryLabel">Strict Country: <strong>OFF</strong></div>
+                    <div class="connection-status" id="strictCountryStatus">All countries accepted</div>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="strictCountryToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+
         <!-- Confirmation Answer Toggle -->
         <div class="connection-toggle" id="confirmToggleWrap">
             <div class="connection-left">
@@ -120,19 +135,10 @@
             <div class="stat-row"><span class="stat-label">Queued</span><span class="stat-value" id="statQueued">0</span></div>
             <div class="stat-row"><span class="stat-label">Acquired</span><span class="stat-value" id="statAcquired" style="color:#02A699;">0</span></div>
             <div class="stat-row"><span class="stat-label">Rejected</span><span class="stat-value" id="statRejected" style="color:#ef7076;">0</span></div>
+            <div class="stat-row"><span class="stat-label">Country Blocked</span><span class="stat-value" id="statCountryBlocked" style="color:#f5a623;">0</span></div>
             <div class="stat-row"><span class="stat-label">Duplicate</span><span class="stat-value" id="statDuplicate" style="color:#f5a623;">0</span></div>
             <div class="stat-row"><span class="stat-label">Failed</span><span class="stat-value" id="statFailed" style="color:#ef7076;">0</span></div>
             <div class="stat-row"><span class="stat-label">Popups Handled</span><span class="stat-value" id="statPopups" style="color:#7c6f9e;">0</span></div>
-        </div>
-
-        <!-- Export Button -->
-        <div class="section-title">Data Export</div>
-        <div class="export-actions">
-            <button class="btn-export" id="exportCsvBtn">
-                <span class="export-icon">📥</span>
-                <span>Export Report (.csv)</span>
-            </button>
-            <div class="export-hint">Multi-tab CSV: Stats, Leads, Config, Keywords, Logs</div>
         </div>
 
         <!-- Emergency -->
@@ -145,7 +151,7 @@
         <div class="footer">
             <a id="configLink">⚙️ Config</a>
             <a id="debugLink">🐞 Debug</a>
-            <span class="version">v4.3.1</span>
+            <span class="version">v5.0.0</span>
         </div>
 
         <!-- Developer Credit -->

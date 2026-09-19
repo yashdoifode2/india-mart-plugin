@@ -1,9 +1,9 @@
 // src/bundle.js
-// IndiaMART BuyLead Assistant - Full Config + Scoring + Data Management
+// IndiaMART BuyLead Assistant - v6.1.0
+// Fixed: Required keywords = ANY match + improved logging + safety visibility
 // Developed by CodeNagpur.in
-// Version 4.9.0 - RLS-safe counts + is_contacted-only duplicate cache
 
-console.log('🎯 IndiaMART BuyLead Assistant v4.9.0');
+console.log('🎯 IndiaMART BuyLead Assistant v6.1.0');
 console.log('📦 Developed by CodeNagpur.in');
 console.log('🔗 https://codenagpur.in');
 
@@ -16,11 +16,18 @@ console.log('🔗 https://codenagpur.in');
     var DEFAULT_CONFIG = {
         mode: 'AUTOMATIC',
         minScore: 60,
-        maxPerMinute: 5,
-        maxPerHour: 20,
-        maxPerDay: 50,
-        maxPerSession: 30,
-        cooldownMs: 2000,
+        maxPerMinute: 30,
+        maxPerHour: 200,
+        maxPerDay: 1000,
+        maxPerSession: 500,
+        cooldownMs: 1500,
+
+        // === STRICT COUNTRY FILTER ===
+        strictCountryMode: false,
+        allowedCountries: ['IN'],
+        strictCountryRejectUnknown: true,
+
+        // Scoring weights
         scoreWeights: {
             base: 50,
             perProductKeyword: 10, maxProductBonus: 30,
@@ -31,13 +38,21 @@ console.log('🔗 https://codenagpur.in');
         scorePenalties: { wrongCountry: -20, wrongState: -10, noContact: -5 },
         preferredStates: ['maharashtra'],
         preferredCountries: ['IN'],
+
+        // Navigator
         autoScroll: true,
         scrollSpeed: 400, scrollDelayMs: 100, bottomWaitMs: 1500,
         loopIntervalMs: 1200, loadMoreWaitMs: 3000, maxStuckLoops: 4,
         maxReloadsPerSession: 20, autoReloadOnComplete: true, autoReloadDelayMs: 2000,
+
+        // Popup
         autoMinimize: true, popupTimeoutMs: 10000,
         confirmationAnswer: 'yes', purchaseAction: 'close',
+
+        // Connection
         supabaseEnabled: true,
+
+        // Panel
         panelPosition: null, panelCollapsed: false
     };
 
@@ -109,25 +124,20 @@ console.log('🔗 https://codenagpur.in');
     LeadIdGenerator.prototype.generateFromElement = function(element) {
         var dataId = element.getAttribute('data-lead-id');
         if (dataId) return 'dm_' + dataId;
-
         var id = element.getAttribute('id');
         if (id && id.length > 3) return 'id_' + id;
-
         var links = element.querySelectorAll('a[href]');
         for (var i = 0; i < links.length; i++) {
             var href = links[i].getAttribute('href') || '';
             var match = href.match(/(?:buyerid|leadid|blid|queryid)[=\/](\d+)/i);
             if (match) return 'lnk_' + match[1];
         }
-
         var product = element.querySelector('[class*="BuyLdC"] span.SLC_f18');
         var productText = product ? product.textContent.trim() : '';
         var location = element.querySelector('[class*="BuyLdC_time_loc"] strong');
         var locationText = location ? location.textContent.trim() : '';
-
         var combined = productText + '|' + locationText;
         if (combined.length < 5) return null;
-
         var hash = 0;
         for (var j = 0; j < combined.length; j++) {
             var chr = combined.charCodeAt(j);
@@ -259,7 +269,7 @@ console.log('🔗 https://codenagpur.in');
             try { window.scrollTo(0, newY); } catch (e) {}
             if (Math.abs(newY - lastY) < 5) {
                 sameCount++;
-                if (sameCount >= maxSame) { self.logger.debug('📍 Scroll stalled at ' + Math.round(curY)); done(); return; }
+                if (sameCount >= maxSame) { self.logger.debug('📍 Scroll stalled'); done(); return; }
             } else { sameCount = 0; }
             lastY = newY;
             setTimeout(step, self._settings.scrollDelayMs);
@@ -305,7 +315,7 @@ console.log('🔗 https://codenagpur.in');
                 catch (e) { self.logger.warn('Load-more click failed: ' + e.message); }
             }, 300);
             return true;
-        } catch (e) { this.logger.warn('Load-more scrollIntoView failed: ' + e.message); return false; }
+        } catch (e) { return false; }
     };
 
     PageNavigator.prototype._countLeads = function() {
@@ -317,12 +327,12 @@ console.log('🔗 https://codenagpur.in');
         var reloadCount = 0;
         try { reloadCount = parseInt(sessionStorage.getItem(this.RELOAD_STORAGE_KEY) || '0', 10) || 0; } catch (e) {}
         if (reloadCount >= this._settings.maxReloadsPerSession) {
-            this.logger.warn('🛑 Max auto-reloads reached (' + reloadCount + '). Stopping.');
+            this.logger.warn('🛑 Max auto-reloads reached');
             this._showFinalBanner(); return;
         }
         try { sessionStorage.setItem(this.RELOAD_STORAGE_KEY, String(reloadCount + 1)); } catch (e) {}
         var nextCount = reloadCount + 1;
-        this.logger.info('🔄 Auto-reloading (#' + nextCount + '/' + this._settings.maxReloadsPerSession + ') in ' + (this._settings.autoReloadDelayMs / 1000) + 's');
+        this.logger.info('🔄 Auto-reloading (#' + nextCount + '/' + this._settings.maxReloadsPerSession + ')');
         this._showReloadOverlay(nextCount);
         setTimeout(function() { try { window.location.reload(); } catch (e) {} }, this._settings.autoReloadDelayMs);
     };
@@ -337,11 +347,8 @@ console.log('🔗 https://codenagpur.in');
             overlay.innerHTML = '<div style="background:#fff;padding:24px 32px;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,0.3);text-align:center;max-width:340px;">' +
                 '<div style="font-size:40px;margin-bottom:12px;">🔄</div>' +
                 '<div style="font-size:16px;font-weight:700;color:#1a1a2e;margin-bottom:6px;">All leads processed</div>' +
-                '<div style="font-size:12px;color:#666;line-height:1.5;margin-bottom:12px;">Reloading page...<br><span style="color:#999;font-size:11px;">Reload #' + n + ' of ' + this._settings.maxReloadsPerSession + '</span></div>' +
-                '<div style="width:100%;height:4px;background:#e8ecf1;border-radius:2px;overflow:hidden;"><div id="bl-reload-progress" style="height:100%;background:#02A699;width:0%;transition:width 2s linear;"></div></div></div>';
+                '<div style="font-size:12px;color:#666;">Reloading page... (#' + n + '/' + this._settings.maxReloadsPerSession + ')</div></div>';
             document.body.appendChild(overlay);
-            var bar = document.getElementById('bl-reload-progress');
-            if (bar) setTimeout(function() { bar.style.width = '100%'; }, 50);
         } catch (e) {}
     };
 
@@ -351,18 +358,10 @@ console.log('🔗 https://codenagpur.in');
             if (existing) existing.remove();
             var banner = document.createElement('div');
             banner.id = 'bl-final-banner';
-            banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#fff8e8;border:2px solid #f5a623;border-radius:8px;padding:14px 20px;z-index:2147483646;box-shadow:0 4px 20px rgba(0,0,0,0.15);font-family:-apple-system,Arial,sans-serif;font-size:13px;color:#1a1a2e;max-width:400px;';
+            banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#fff8e8;border:2px solid #f5a623;border-radius:8px;padding:14px 20px;z-index:2147483646;font-family:-apple-system,Arial,sans-serif;font-size:13px;color:#1a1a2e;max-width:400px;';
             banner.innerHTML = '<div style="font-weight:700;color:#f5a623;margin-bottom:4px;">🛑 Session Limit Reached</div>' +
-                '<div style="font-size:11px;color:#666;">Auto-reloaded ' + this._settings.maxReloadsPerSession + ' times. Please refresh manually.</div>' +
-                '<div style="margin-top:10px;text-align:right;">' +
-                '<button id="bl-final-refresh" style="padding:6px 14px;background:#02A699;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;">🔄 Refresh Now</button>' +
-                '<button id="bl-final-dismiss" style="padding:6px 14px;background:#e8ecf1;color:#333;border:none;border-radius:4px;cursor:pointer;font-weight:600;font-size:11px;margin-left:6px;">Dismiss</button></div>';
+                '<div style="font-size:11px;color:#666;">Auto-reloaded ' + this._settings.maxReloadsPerSession + ' times. Please refresh manually.</div>';
             document.body.appendChild(banner);
-            document.getElementById('bl-final-refresh').addEventListener('click', function() {
-                try { sessionStorage.removeItem('bl_auto_reload_count'); } catch (e) {}
-                window.location.reload();
-            });
-            document.getElementById('bl-final-dismiss').addEventListener('click', function() { banner.remove(); });
         } catch (e) {}
     };
 
@@ -572,21 +571,20 @@ console.log('🔗 https://codenagpur.in');
         if (closeBtn) {
             try {
                 closeBtn.click();
-                this.logger.info('✅ Purchase modal closed via close button');
+                this.logger.info('✅ Purchase modal closed');
                 try { var esc = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }); document.dispatchEvent(esc); } catch (e) {}
                 document.body.style.overflow = '';
                 this._active = false;
                 this._handledCount++;
                 if (this._onHandled) this._onHandled({ success: true, action: 'purchase_closed', type: 'PURCHASE' });
                 return;
-            } catch (err) { this.logger.error('Close click failed: ' + err.message); }
+            } catch (err) {}
         }
         try {
             popup.style.display = 'none';
             var parent = popup.parentElement;
             if (parent && (parent.className || '').toString().indexOf('fixed') !== -1) parent.style.display = 'none';
             document.body.style.overflow = '';
-            this.logger.info('✅ Purchase modal hidden via fallback');
             this._active = false;
             if (this._onHandled) this._onHandled({ success: true, action: 'purchase_hidden', type: 'PURCHASE' });
         } catch (err) {
@@ -620,7 +618,6 @@ console.log('🔗 https://codenagpur.in');
         if (!target && buttons.length > 0) target = answer === 'yes' ? buttons[buttons.length - 1] : buttons[0];
         if (target) {
             try {
-                this.logger.info('Clicking "' + (target.textContent || '').trim().substring(0, 40) + '"');
                 target.click();
                 this._active = false;
                 this._handledCount++;
@@ -694,7 +691,7 @@ console.log('🔗 https://codenagpur.in');
     PopupManager.prototype.getCount = function() { return this._handledCount; };
 
     // ============================================================
-    // KEYWORD MANAGER
+    // KEYWORD MANAGER — Smart matching
     // ============================================================
     function KeywordManager() {
         this.logger = new Logger('KeywordManager');
@@ -707,6 +704,52 @@ console.log('🔗 https://codenagpur.in');
     KeywordManager.prototype.setSupabaseEnabled = function(enabled) {
         this._supabaseEnabled = enabled;
         this._rebuildKeywords();
+    };
+
+    // Normalize text
+    KeywordManager.prototype._normalize = function(text) {
+        if (!text) return '';
+        return String(text)
+            .toLowerCase()
+            .replace(/[^\w\s]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+
+    // Smart keyword matching
+    KeywordManager.prototype._textMatches = function(text, keyword) {
+        if (!text || !keyword) return false;
+        var normText = this._normalize(text);
+        var normKw = this._normalize(keyword);
+        if (!normText || !normKw) return false;
+
+        // Direct substring
+        if (normText.indexOf(normKw) !== -1) return true;
+
+        var words = normText.split(' ').filter(function(w) { return w.length > 0; });
+        var kwWords = normKw.split(' ').filter(function(w) { return w.length > 0; });
+
+        if (kwWords.length === 1) {
+            var kw = kwWords[0];
+            for (var i = 0; i < words.length; i++) {
+                if (words[i] === kw) return true;
+                if (words[i].length >= kw.length && words[i].indexOf(kw) === 0) return true;
+                if (words[i].length > 4 && words[i].indexOf(kw) !== -1) return true;
+                if (words[i] === kw + 's' || words[i] === kw + 'es') return true;
+            }
+            return false;
+        } else {
+            for (var k = 0; k < kwWords.length; k++) {
+                var found = false;
+                for (var j = 0; j < words.length; j++) {
+                    if (words[j] === kwWords[k]) { found = true; break; }
+                    if (words[j].indexOf(kwWords[k]) === 0) { found = true; break; }
+                    if (words[j] === kwWords[k] + 's' || words[j] === kwWords[k] + 'es') { found = true; break; }
+                }
+                if (!found) return false;
+            }
+            return true;
+        }
     };
 
     KeywordManager.prototype.loadKeywords = function() {
@@ -739,52 +782,57 @@ console.log('🔗 https://codenagpur.in');
             return;
         }
 
-        for (var i = 0; i < filters.length; i++) {
-            var filter = filters[i];
-            var config = filter.filter_config || {};
+        var addUnique = function(arr, item) {
+            if (!item || typeof item !== 'string') return;
+            var lower = item.toLowerCase().trim();
+            if (lower && arr.indexOf(lower) === -1) arr.push(lower);
+        };
 
-            if (config.product_names && Array.isArray(config.product_names)) {
-                for (var p = 0; p < config.product_names.length; p++) {
-                    var pk = (config.product_names[p] || '').toString().trim().toLowerCase();
-                    if (pk && product.indexOf(pk) === -1) product.push(pk);
-                }
+        for (var i = 0; i < filters.length; i++) {
+            var f = filters[i];
+
+            // New keyword columns
+            if (Array.isArray(f.product_keywords)) {
+                for (var a = 0; a < f.product_keywords.length; a++) addUnique(product, f.product_keywords[a]);
             }
-            if (config.keywords && Array.isArray(config.keywords)) {
-                for (var kw = 0; kw < config.keywords.length; kw++) {
-                    var kk = (config.keywords[kw] || '').toString().trim().toLowerCase();
-                    if (kk && product.indexOf(kk) === -1) product.push(kk);
-                }
+            if (Array.isArray(f.negative_keywords)) {
+                for (var b = 0; b < f.negative_keywords.length; b++) addUnique(negative, f.negative_keywords[b]);
             }
-            if (config.negative_keywords && Array.isArray(config.negative_keywords)) {
-                for (var n = 0; n < config.negative_keywords.length; n++) {
-                    var nk = (config.negative_keywords[n] || '').toString().trim().toLowerCase();
-                    if (nk && negative.indexOf(nk) === -1) negative.push(nk);
-                }
+            if (Array.isArray(f.required_keywords)) {
+                for (var c = 0; c < f.required_keywords.length; c++) addUnique(required, f.required_keywords[c]);
             }
-            if (config.required_keywords && Array.isArray(config.required_keywords)) {
-                for (var r = 0; r < config.required_keywords.length; r++) {
-                    var rk = (config.required_keywords[r] || '').toString().trim().toLowerCase();
-                    if (rk && required.indexOf(rk) === -1) required.push(rk);
-                }
+            if (Array.isArray(f.location_keywords)) {
+                for (var d = 0; d < f.location_keywords.length; d++) addUnique(location, f.location_keywords[d]);
             }
-            if (config.countries && Array.isArray(config.countries)) {
-                for (var c = 0; c < config.countries.length; c++) {
-                    var ck = (config.countries[c] || '').toString().trim().toLowerCase();
-                    if (ck && location.indexOf(ck) === -1) location.push(ck);
-                }
+
+            // Legacy fallback
+            var config = f.filter_config || {};
+            if (Array.isArray(config.product_names)) {
+                for (var e = 0; e < config.product_names.length; e++) addUnique(product, config.product_names[e]);
             }
-            if (config.states && Array.isArray(config.states)) {
-                for (var s = 0; s < config.states.length; s++) {
-                    var sk = (config.states[s] || '').toString().trim().toLowerCase();
-                    if (sk && location.indexOf(sk) === -1) location.push(sk);
-                }
+            if (Array.isArray(config.keywords)) {
+                for (var fk = 0; fk < config.keywords.length; fk++) addUnique(product, config.keywords[fk]);
+            }
+            if (Array.isArray(config.negative_keywords)) {
+                for (var g = 0; g < config.negative_keywords.length; g++) addUnique(negative, config.negative_keywords[g]);
+            }
+            if (Array.isArray(config.required_keywords)) {
+                for (var h = 0; h < config.required_keywords.length; h++) addUnique(required, config.required_keywords[h]);
+            }
+            if (Array.isArray(config.countries)) {
+                for (var k1 = 0; k1 < config.countries.length; k1++) addUnique(location, config.countries[k1]);
+            }
+            if (Array.isArray(config.states)) {
+                for (var k2 = 0; k2 < config.states.length; k2++) addUnique(location, config.states[k2]);
             }
         }
 
         this._supabaseKeywords = { product: product, negative: negative, location: location, required: required };
         this._rebuildKeywords();
         this.logger.info('📥 Supabase keywords extracted', {
-            product: product.length, negative: negative.length, location: location.length, required: required.length, filters: filters.length
+            product: product.length, negative: negative.length,
+            location: location.length, required: required.length,
+            filters: filters.length
         });
     };
 
@@ -827,32 +875,65 @@ console.log('🔗 https://codenagpur.in');
     KeywordManager.prototype.getKeywords = function(type) { return this.keywords[type] || []; };
     KeywordManager.prototype.getAllKeywords = function() { return this.keywords; };
 
+    // ============================================================
+    // CHECK KEYWORDS — ANY required match (not all)
+    // ============================================================
     KeywordManager.prototype.checkKeywords = function(text) {
-        text = (text || '').toLowerCase();
+        text = text || '';
         var req = this.keywords.required || [];
         var neg = this.keywords.negative || [];
         var prod = this.keywords.product || [];
 
+        var debugInfo = {
+            textPreview: text.substring(0, 120)
+        };
+
+        // === REQUIRED KEYWORDS ===
+        // Rule: At least ONE required keyword must match.
+        // Required list should contain ALTERNATIVES, not AND conditions.
         if (req.length > 0) {
-            var reqMatch = false;
+            var reqMatched = [];
             for (var i = 0; i < req.length; i++) {
-                if (req[i] && text.indexOf(req[i]) !== -1) { reqMatch = true; break; }
+                if (this._textMatches(text, req[i])) reqMatched.push(req[i]);
             }
-            if (!reqMatch) return { passed: false, reason: 'no_required_keyword', matched: [], negative: [] };
+            if (reqMatched.length === 0) {
+                return {
+                    passed: false,
+                    reason: 'no_required_keyword',
+                    matched: [],
+                    negative: [],
+                    debug: Object.assign({}, debugInfo, { requiredKeywords: req })
+                };
+            }
         }
+
+        // === NEGATIVE KEYWORDS ===
+        var negMatched = [];
         for (var j = 0; j < neg.length; j++) {
-            if (neg[j] && text.indexOf(neg[j]) !== -1) {
-                return { passed: false, reason: 'negative_keyword_found', matched: [], negative: [neg[j]] };
-            }
+            if (this._textMatches(text, neg[j])) negMatched.push(neg[j]);
         }
+        if (negMatched.length > 0) {
+            return { passed: false, reason: 'negative_keyword_found', matched: [], negative: negMatched, debug: debugInfo };
+        }
+
+        // === PRODUCT KEYWORDS ===
         var matched = [];
         if (prod.length > 0) {
             for (var k = 0; k < prod.length; k++) {
-                if (prod[k] && text.indexOf(prod[k]) !== -1) matched.push(prod[k]);
+                if (this._textMatches(text, prod[k])) matched.push(prod[k]);
             }
-            if (matched.length === 0) return { passed: false, reason: 'no_product_keyword', matched: [], negative: [] };
+            if (matched.length === 0) {
+                return {
+                    passed: false,
+                    reason: 'no_product_keyword',
+                    matched: [],
+                    negative: [],
+                    debug: Object.assign({}, debugInfo, { productKeywords: prod })
+                };
+            }
         }
-        return { passed: true, reason: null, matched: matched, negative: [] };
+
+        return { passed: true, reason: null, matched: matched, negative: [], debug: debugInfo };
     };
 
     // ============================================================
@@ -862,9 +943,9 @@ console.log('🔗 https://codenagpur.in');
         this.mode = 'AUTOMATIC';
         this._emergencyStop = false;
         this.counters = { minute: 0, hour: 0, day: 0, session: 0 };
-        this.limits = { perMinute: 5, perHour: 20, perDay: 50, perSession: 30 };
+        this.limits = { perMinute: 30, perHour: 200, perDay: 1000, perSession: 500 };
         this.cooldownUntil = 0;
-        this.cooldownMs = 2000;
+        this.cooldownMs = 1500;
         this._lastMin = Date.now();
         this._lastHour = Date.now();
         this._lastDay = Date.now();
@@ -876,7 +957,9 @@ console.log('🔗 https://codenagpur.in');
         if (now - this._lastDay > 86400000) { this.counters.day = 0; this._lastDay = now; }
     };
     SafetyController.prototype.setMode = function(m) { this.mode = m; };
-    SafetyController.prototype.setLimits = function(l) { for (var k in l) if (l.hasOwnProperty(k) && this.limits.hasOwnProperty(k)) this.limits[k] = l[k]; };
+    SafetyController.prototype.setLimits = function(l) {
+        for (var k in l) if (l.hasOwnProperty(k) && this.limits.hasOwnProperty(k)) this.limits[k] = l[k];
+    };
     SafetyController.prototype.setCooldown = function(ms) { this.cooldownMs = ms; };
     SafetyController.prototype.canAcquire = function() {
         this._reset();
@@ -884,10 +967,10 @@ console.log('🔗 https://codenagpur.in');
         if (this.mode === 'MONITOR') return { allowed: false, reason: 'MONITOR_MODE' };
         if (this.mode === 'DRY_RUN') return { allowed: false, reason: 'DRY_RUN', dryRun: true };
         if (this.cooldownUntil > Date.now()) return { allowed: false, reason: 'COOLDOWN' };
-        if (this.counters.minute >= this.limits.perMinute) return { allowed: false, reason: 'MINUTE_LIMIT' };
-        if (this.counters.hour >= this.limits.perHour) return { allowed: false, reason: 'HOUR_LIMIT' };
-        if (this.counters.day >= this.limits.perDay) return { allowed: false, reason: 'DAY_LIMIT' };
-        if (this.counters.session >= this.limits.perSession) return { allowed: false, reason: 'SESSION_LIMIT' };
+        if (this.counters.minute >= this.limits.perMinute) return { allowed: false, reason: 'MINUTE_LIMIT', details: { used: this.counters.minute, limit: this.limits.perMinute } };
+        if (this.counters.hour >= this.limits.perHour) return { allowed: false, reason: 'HOUR_LIMIT', details: { used: this.counters.hour, limit: this.limits.perHour } };
+        if (this.counters.day >= this.limits.perDay) return { allowed: false, reason: 'DAY_LIMIT', details: { used: this.counters.day, limit: this.limits.perDay } };
+        if (this.counters.session >= this.limits.perSession) return { allowed: false, reason: 'SESSION_LIMIT', details: { used: this.counters.session, limit: this.limits.perSession } };
         return { allowed: true };
     };
     SafetyController.prototype.recordAcquisition = function() {
@@ -901,36 +984,29 @@ console.log('🔗 https://codenagpur.in');
     };
 
     // ============================================================
-    // DUPLICATE MANAGER - only blocks contacted leads
+    // DUPLICATE MANAGER
     // ============================================================
     function DuplicateManager(supabase) {
         this.supabase = supabase;
         this._seen = new Set();
         this._loadedFromDb = false;
     }
-
     DuplicateManager.prototype.loadFromDb = function() {
         var self = this;
         if (this._loadedFromDb) return Promise.resolve();
         return this.supabase.getRecentLeads(200).then(function(leads) {
             var loaded = 0;
             for (var i = 0; i < leads.length; i++) {
-                var l = leads[i];
-                // Only skip leads that were actually contacted
-                if (l.is_contacted) {
-                    self._seen.add(l.unique_query_id);
+                if (leads[i].is_contacted) {
+                    self._seen.add(leads[i].unique_query_id);
                     loaded++;
                 }
             }
             self._loadedFromDb = true;
-            console.log('[Dup] Loaded ' + loaded + ' CONTACTED leads from DB (uncontacted can be retried)');
+            console.log('[Dup] Loaded ' + loaded + ' CONTACTED leads from DB');
             return loaded;
-        }).catch(function(err) {
-            console.warn('[Dup] loadFromDb failed:', err);
-            return 0;
-        });
+        }).catch(function(err) { return 0; });
     };
-
     DuplicateManager.prototype.isDuplicate = function(leadId) { return this._seen.has(leadId); };
     DuplicateManager.prototype.markSeen = function(leadId) { this._seen.add(leadId); };
     DuplicateManager.prototype.clear = function() { this._seen = new Set(); };
@@ -1068,21 +1144,71 @@ console.log('🔗 https://codenagpur.in');
                 else if (age > 600000) delete known[key];
             }
             if (newCards.length > 0) this._callback(newCards);
-        } catch (e) { this.logger.error('Scan error', e); }
+        } catch (e) {}
         this._scanning = false;
     };
     Scanner.prototype.getStatus = function() { return { running: this._running, knownLeads: Object.keys(this._knownLeads).length }; };
 
     // ============================================================
-    // PARSER
+    // PARSER — extract country + rich text
     // ============================================================
     function Parser() { this.logger = new Logger('Parser'); }
+
     Parser.prototype.parseCard = function(el, leadId) {
         try {
             var productEl = el.querySelector('[class*="BuyLdC"] span.SLC_f18, [class*="BuyLdC"] .SLC_f18');
             var product = productEl ? productEl.textContent.trim() : 'Unknown';
+
+            if (!product || product === 'Unknown') {
+                var altProd = el.querySelector('[class*="BuyLdC"] strong, [class*="SLC_f18"]');
+                if (altProd) product = altProd.textContent.trim();
+            }
+
             var locEl = el.querySelector('[class*="BuyLdC_time_loc"] strong');
             var location = locEl ? locEl.textContent.trim() : null;
+
+            // Country extraction
+            var countryIso = null;
+            try {
+                var flagImg = el.querySelector('img[src*="country-flags"], img[src*="flag"]');
+                if (flagImg && flagImg.src) {
+                    var m = flagImg.src.match(/\/([a-z]{2})_flag/i);
+                    if (m && m[1]) countryIso = m[1].toUpperCase();
+                }
+            } catch (e) {}
+
+            if (!countryIso && location) {
+                var locLower = location.toLowerCase();
+                var countryMap = {
+                    'india': 'IN', 'usa': 'US', 'united states': 'US', 'america': 'US',
+                    'united kingdom': 'GB', 'uk': 'GB', 'britain': 'GB',
+                    'uae': 'AE', 'united arab emirates': 'AE',
+                    'saudi arabia': 'SA', 'russia': 'RU', 'china': 'CN',
+                    'australia': 'AU', 'canada': 'CA', 'germany': 'DE', 'france': 'FR',
+                    'japan': 'JP', 'brazil': 'BR', 'mexico': 'MX', 'italy': 'IT',
+                    'spain': 'ES', 'south korea': 'KR', 'korea': 'KR',
+                    'netherlands': 'NL', 'south africa': 'ZA', 'singapore': 'SG',
+                    'thailand': 'TH', 'vietnam': 'VN', 'indonesia': 'ID',
+                    'malaysia': 'MY', 'philippines': 'PH', 'turkey': 'TR',
+                    'egypt': 'EG', 'israel': 'IL', 'pakistan': 'PK',
+                    'bangladesh': 'BD', 'sri lanka': 'LK', 'nepal': 'NP'
+                };
+                for (var name in countryMap) {
+                    if (locLower.indexOf(name) !== -1) { countryIso = countryMap[name]; break; }
+                }
+            }
+
+            if (!countryIso && location) {
+                var indianStates = ['maharashtra', 'madhya pradesh', 'tamil nadu', 'karnataka', 'delhi',
+                    'gujarat', 'rajasthan', 'uttar pradesh', 'west bengal', 'kerala',
+                    'punjab', 'haryana', 'bihar', 'odisha', 'telangana', 'andhra pradesh',
+                    'chandrapur', 'nagpur', 'mumbai', 'pune', 'indore', 'bhopal'];
+                var locLow2 = location.toLowerCase();
+                for (var j = 0; j < indianStates.length; j++) {
+                    if (locLow2.indexOf(indianStates[j]) !== -1) { countryIso = 'IN'; break; }
+                }
+            }
+
             var contact = { mobile: null, email: null, phone: null };
             var availSec = el.querySelector('[class*="Available"], [class*="SLC_aifs"]');
             if (availSec) {
@@ -1091,21 +1217,37 @@ console.log('🔗 https://codenagpur.in');
                 if (at.indexOf('email') !== -1) contact.email = 'available';
                 if (at.indexOf('whatsapp') !== -1) contact.phone = 'available';
             }
+
+            // Rich searchable text
             var fullText = el.textContent || '';
+            var requirementText = '';
+            var msgEl = el.querySelector('[class*="BuyLdC_msg"], [class*="SLC_f14"], [class*="SLC_f13"]');
+            if (msgEl) requirementText = msgEl.textContent.trim();
+
+            var mcatEl = el.querySelector('[class*="BuyLdC_mcat"], [class*="mcat"]');
+            var mcatText = mcatEl ? mcatEl.textContent.trim() : '';
+
+            var searchableText = product + ' ' + requirementText + ' ' + mcatText;
+
             return {
                 leadId: leadId, uniqueQueryId: leadId, queryType: 'BUY_LEAD',
                 queryTime: new Date().toISOString(),
-                productName: product, queryProductName: product,
-                requirement: fullText.substring(0, 300), queryMessage: fullText.substring(0, 300),
+                productName: product,
+                queryProductName: product,
+                requirement: searchableText.substring(0, 500),
+                queryMessage: searchableText.substring(0, 500),
+                queryMcatName: mcatText || null,
                 location: location,
                 city: location ? location.split(',')[0].trim() : null,
                 state: location ? location.split(',').pop().trim() : null,
-                countryIso: 'IN', quantity: null, contact: contact,
+                countryIso: countryIso,
+                quantity: null, contact: contact,
                 subject: product + (location ? ' - ' + location : ''),
                 raw: { element: el, fullText: fullText.substring(0, 500) }
             };
         } catch (e) { return null; }
     };
+
     Parser.prototype.normalize = function(lead) {
         if (!lead) return null;
         lead.productName = (lead.productName || '').toLowerCase();
@@ -1157,8 +1299,6 @@ console.log('🔗 https://codenagpur.in');
                 if (!button) button = el.querySelector('[class*="BuyLdC_btn"], [class*="SLC_FillCTA"]');
                 if (!button) { resolve({ success: false, message: 'No button' }); return; }
 
-                log.info('Clicking button', { leadId: lead.leadId });
-
                 var popupHandled = false;
                 var popupResult = null;
                 var stopAcquiring = false;
@@ -1176,7 +1316,7 @@ console.log('🔗 https://codenagpur.in');
                 }
 
                 button.click();
-                log.info('✅ Clicked Contact Buyer Now (1)', { leadId: lead.leadId });
+                log.info('✅ Clicked (1)', { leadId: lead.leadId });
 
                 var retryTimer = setTimeout(function() {
                     if (popupHandled) return;
@@ -1207,7 +1347,6 @@ console.log('🔗 https://codenagpur.in');
                     }
                 }, 100);
             } catch (err) {
-                log.error('Acquire error', { leadId: lead.leadId, error: err.message });
                 resolve({ success: false, message: err.message });
             }
         });
@@ -1314,7 +1453,7 @@ console.log('🔗 https://codenagpur.in');
     // ============================================================
     function Orchestrator() {
         this.logger = new Logger('Orchestrator');
-        this.logger.info('🚀 Initializing v4.9.0');
+        this.logger.info('🚀 Initializing v6.1.0');
 
         this.supabase = new window.SupabaseService();
         this.supabase.setLogger(this.logger);
@@ -1334,6 +1473,7 @@ console.log('🔗 https://codenagpur.in');
         this.stats = {
             discovered: 0, parsed: 0, validated: 0, scored: 0,
             queued: 0, acquired: 0, rejected: 0, duplicate: 0, failed: 0,
+            countryBlocked: 0,
             dbSynced: 0, popupsHandled: 0, loopsCompleted: 0, loadMoreClicks: 0
         };
 
@@ -1354,6 +1494,12 @@ console.log('🔗 https://codenagpur.in');
                 self.config = Object.assign({}, DEFAULT_CONFIG, c);
                 if (c.scoreWeights) self.config.scoreWeights = Object.assign({}, DEFAULT_CONFIG.scoreWeights, c.scoreWeights);
                 if (c.scorePenalties) self.config.scorePenalties = Object.assign({}, DEFAULT_CONFIG.scorePenalties, c.scorePenalties);
+
+                self.config.strictCountryMode = self.config.strictCountryMode === true;
+                self.config.allowedCountries = (self.config.allowedCountries || ['IN']).map(function(x) {
+                    return String(x).toUpperCase().trim();
+                }).filter(function(x) { return x; });
+                self.config.strictCountryRejectUnknown = self.config.strictCountryRejectUnknown !== false;
 
                 self._supabaseEnabled = self.config.supabaseEnabled !== false;
                 self._savedPanelPosition = self.config.panelPosition;
@@ -1390,8 +1536,10 @@ console.log('🔗 https://codenagpur.in');
         var self = this;
         this.logger.info('Mode: ' + this.config.mode);
         this.logger.info('Supabase mode: ' + (this._supabaseEnabled ? 'ON' : 'OFF'));
+        if (this.config.strictCountryMode) {
+            this.logger.info('🌍 STRICT COUNTRY ON — allowed: ' + this.config.allowedCountries.join(', '));
+        }
 
-        // Clear duplicate cache at start of session
         this.duplicateManager.clear();
         this.logger.info('🧹 Duplicate cache cleared at session start');
 
@@ -1447,7 +1595,7 @@ console.log('🔗 https://codenagpur.in');
             var maxX = window.innerWidth - 200, maxY = window.innerHeight - 150;
             defaultStyle = 'top:' + Math.max(0, Math.min(savedPos.top, maxY)) + 'px;left:' + Math.max(0, Math.min(savedPos.left, maxX)) + 'px;';
         }
-        panel.style.cssText = 'position:fixed;' + defaultStyle + 'background:#fff;border:2px solid #02A699;border-radius:8px;padding:0;z-index:2147483647;font-family:-apple-system,Arial,sans-serif;font-size:11px;box-shadow:0 4px 16px rgba(0,0,0,0.15);width:230px;user-select:none;overflow:hidden;';
+        panel.style.cssText = 'position:fixed;' + defaultStyle + 'background:#fff;border:2px solid #02A699;border-radius:8px;padding:0;z-index:2147483647;font-family:-apple-system,Arial,sans-serif;font-size:11px;box-shadow:0 4px 16px rgba(0,0,0,0.15);width:250px;user-select:none;overflow:hidden;';
         var iconUrl = '';
         try { iconUrl = chrome.runtime.getURL('plugin.png'); } catch (e) {}
         panel.innerHTML =
@@ -1461,8 +1609,8 @@ console.log('🔗 https://codenagpur.in');
                 '<div style="color:#666;font-size:10px;" id="bl-status-text">Init...</div>' +
                 '<div style="color:#666;font-size:10px;" id="bl-stats-text">Scanned: 0 | Acquired: 0</div>' +
                 '<div style="color:#999;font-size:9px;" id="bl-connection-text">☁️ CRM</div>' +
-                '<div style="color:#999;font-size:9px;" id="bl-popup-text">Popups: 0</div>' +
-                '<div style="color:#999;font-size:9px;" id="bl-loop-text">🔄 Loops: 0</div>' +
+                '<div style="color:#999;font-size:9px;" id="bl-country-text">🌍 Any</div>' +
+                '<div style="color:#999;font-size:9px;" id="bl-rate-text">📊 0/30 min</div>' +
                 '<div style="color:#999;font-size:9px;" id="bl-kw-text">KW: 0</div>' +
             '</div>';
         document.body.appendChild(panel);
@@ -1564,8 +1712,8 @@ console.log('🔗 https://codenagpur.in');
             var text = document.getElementById('bl-status-text');
             var stats = document.getElementById('bl-stats-text');
             var conn = document.getElementById('bl-connection-text');
-            var popup = document.getElementById('bl-popup-text');
-            var loop = document.getElementById('bl-loop-text');
+            var countryEl = document.getElementById('bl-country-text');
+            var rateEl = document.getElementById('bl-rate-text');
             var kwEl = document.getElementById('bl-kw-text');
 
             if (dot) dot.style.background = s.emergencyStop ? '#ef7076' : (s.cooldown ? '#fff5cc' : '#fff');
@@ -1581,12 +1729,28 @@ console.log('🔗 https://codenagpur.in');
             if (stats) stats.textContent = 'Scanned: ' + self.stats.discovered + ' | Acquired: ' + self.stats.acquired;
             if (conn) {
                 var kws = self.keywordManager.getAllKeywords();
-                var src = self._supabaseEnabled ? '☁️ CRM' : '📴 Local';
-                conn.textContent = src + ' (P' + kws.product.length + ')';
+                conn.textContent = (self._supabaseEnabled ? '☁️ CRM' : '📴 Local') + ' (P' + kws.product.length + ')';
                 conn.style.color = self._supabaseEnabled ? '#02A699' : '#f5a623';
             }
-            if (popup) popup.textContent = 'Popups: ' + self.popupManager.getCount();
-            if (loop) loop.textContent = '🔄 Loops: ' + self.stats.loopsCompleted + ' | Leads: ' + self.navigator._countLeads();
+            if (countryEl) {
+                if (self.config.strictCountryMode) {
+                    countryEl.textContent = '🌍 STRICT: ' + (self.config.allowedCountries.join(', ') || '—');
+                    countryEl.style.color = '#02A699';
+                    countryEl.style.fontWeight = '700';
+                } else {
+                    countryEl.textContent = '🌍 Any country';
+                    countryEl.style.color = '#999';
+                    countryEl.style.fontWeight = '400';
+                }
+            }
+            if (rateEl) {
+                var c = s.counters;
+                var lim = s.limits;
+                rateEl.textContent = '📊 ' + c.minute + '/' + lim.perMinute + ' min | ' + c.hour + '/' + lim.perHour + ' hr';
+                var nearLimit = (c.minute >= lim.perMinute) || (c.hour >= lim.perHour);
+                rateEl.style.color = nearLimit ? '#f5a623' : '#999';
+                rateEl.style.fontWeight = nearLimit ? '700' : '400';
+            }
             if (kwEl) {
                 var k2 = self.keywordManager.getAllKeywords();
                 kwEl.textContent = 'KW: P' + k2.product.length + ' N' + k2.negative.length + ' R' + k2.required.length;
@@ -1595,12 +1759,48 @@ console.log('🔗 https://codenagpur.in');
         }, 1500);
     };
 
+    // ============================================================
+    // STRICT COUNTRY
+    // ============================================================
+    Orchestrator.prototype._checkStrictCountry = function(lead) {
+        if (!this.config.strictCountryMode) return { allowed: true };
+        var allowed = (this.config.allowedCountries || []).map(function(c) {
+            return String(c).toUpperCase().trim();
+        }).filter(function(c) { return c.length > 0; });
+
+        if (allowed.length === 0) {
+            return { allowed: false, reason: 'STRICT_COUNTRY_NO_ALLOWED_LIST', details: { leadCountry: lead.countryIso || null, allowed: [] } };
+        }
+
+        var leadCountry = (lead.countryIso || '').toUpperCase().trim();
+        if (!leadCountry) {
+            if (this.config.strictCountryRejectUnknown) {
+                return { allowed: false, reason: 'STRICT_COUNTRY_UNKNOWN', details: { allowed: allowed } };
+            }
+            return { allowed: true, reason: 'STRICT_COUNTRY_UNKNOWN_ALLOWED' };
+        }
+        if (allowed.indexOf(leadCountry) !== -1) {
+            return { allowed: true, reason: 'STRICT_COUNTRY_MATCH', details: { country: leadCountry } };
+        }
+        return { allowed: false, reason: 'STRICT_COUNTRY_MISMATCH', details: { leadCountry: leadCountry, allowed: allowed } };
+    };
+
+    // ============================================================
+    // CARD PROCESSING — First-priority country filter
+    // ============================================================
     Orchestrator.prototype._onCardsDetected = function(cards) {
         var self = this;
         this.logger.info('📋 Processing ' + cards.length + ' new cards');
+        if (this.config.strictCountryMode) {
+            this.logger.info('🌍 STRICT COUNTRY — allowed: ' + (this.config.allowedCountries || []).join(', '));
+        }
 
         var kws = this.keywordManager.getAllKeywords();
-        this.logger.debug('Keyword state: P' + kws.product.length + ' N' + kws.negative.length + ' R' + kws.required.length);
+        this.logger.info('Keywords: P=' + kws.product.length + ' N=' + kws.negative.length + ' R=' + kws.required.length);
+
+        var safety = this.safety.getStatus();
+        this.logger.info('Rate: min=' + safety.counters.minute + '/' + safety.limits.perMinute +
+                        ' hr=' + safety.counters.hour + '/' + safety.limits.perHour);
 
         for (var i = 0; i < cards.length; i++) {
             try {
@@ -1612,22 +1812,36 @@ console.log('🔗 https://codenagpur.in');
 
                 self.stats.discovered++;
 
+                // === STEP 0: STRICT COUNTRY ===
+                var countryCheck = self._checkStrictCountry(lead);
+                if (!countryCheck.allowed) {
+                    self.stats.countryBlocked++;
+                    self.stateMachine.setState(lead.leadId, 'COUNTRY_BLOCKED', { reason: countryCheck.reason });
+                    self.logger.info('🌍 COUNTRY BLOCK [' + countryCheck.reason + ']: ' + card.id +
+                        ' | got=' + (lead.countryIso || 'unknown'));
+                    continue;
+                }
+
+                // === STEP 1: DUPLICATE ===
                 if (self.duplicateManager.isDuplicate(lead.leadId)) {
                     self.stats.duplicate++;
                     self.logger.debug('⏭ Duplicate: ' + card.id);
                     continue;
                 }
 
-                var text = lead.productName + ' ' + (lead.requirement || '');
+                // === STEP 2: KEYWORDS ===
+                var text = (lead.productName || '') + ' ' + (lead.requirement || '');
                 var kw = self.keywordManager.checkKeywords(text);
                 if (!kw.passed) {
                     self.stats.rejected++;
-                    self.logger.debug('❌ KW reject [' + kw.reason + ']: ' + card.id);
+                    var preview = (lead.productName || '').substring(0, 60);
+                    self.logger.debug('❌ KW [' + kw.reason + ']: ' + card.id + ' | "' + preview + '"');
                     continue;
                 }
 
                 self.stats.validated++;
 
+                // === STEP 3: SCORE ===
                 var score = self.scorer.scoreLead(lead, { matchedProducts: kw.matched || [] });
                 self.stats.scored++;
 
@@ -1637,18 +1851,21 @@ console.log('🔗 https://codenagpur.in');
                     continue;
                 }
 
-                var safety = self.safety.canAcquire();
-                if (!safety.allowed) {
+                // === STEP 4: SAFETY ===
+                var safetyCheck = self.safety.canAcquire();
+                if (!safetyCheck.allowed) {
                     self.stats.rejected++;
-                    self.logger.debug('❌ Safety [' + safety.reason + ']: ' + card.id);
+                    var details = safetyCheck.details ? (' (' + safetyCheck.details.used + '/' + safetyCheck.details.limit + ')') : '';
+                    self.logger.debug('❌ Safety [' + safetyCheck.reason + details + ']: ' + card.id);
                     continue;
                 }
 
+                // === STEP 5: ENQUEUE ===
                 self.duplicateManager.markSeen(lead.leadId);
                 var enqueued = self.queue.enqueue(lead);
                 if (enqueued) {
                     self.stats.queued++;
-                    self.logger.info('✅ Queued ' + card.id + ' (score=' + score.score + ')');
+                    self.logger.info('✅ Queued ' + card.id + ' (score=' + score.score + ', match=' + (kw.matched || []).join(',') + ')');
                 }
                 if (self._supabaseEnabled) self._saveLeadToDb(lead, true);
             } catch (e) {
@@ -1694,7 +1911,7 @@ console.log('🔗 https://codenagpur.in');
                     self.stateMachine.setState(lead.leadId, 'ACQUIRED');
                     self.safety.recordAcquisition();
                     if (result.popup && result.popup.success) self.stats.popupsHandled++;
-                    self.logger.info('🎉 ACQUIRED', { leadId: lead.leadId, msg: result.message });
+                    self.logger.info('🎉 ACQUIRED', { leadId: lead.leadId });
                     if (self._supabaseEnabled) {
                         self.supabase.markLeadContacted(lead.uniqueQueryId).catch(function() {});
                         if (lead._dbId) {
@@ -1706,6 +1923,7 @@ console.log('🔗 https://codenagpur.in');
                 } else {
                     self.stats.failed++;
                     self.stateMachine.setState(lead.leadId, 'FAILED', { error: result.message });
+                    self.logger.error('❌ Failed: ' + result.message, { leadId: lead.leadId });
                 }
                 self._broadcastStatus();
                 resolve();
@@ -1725,6 +1943,7 @@ console.log('🔗 https://codenagpur.in');
             (iconUrl ? '<img src="' + iconUrl + '" style="width:20px;height:20px;object-fit:contain;border-radius:4px;" />' : '') +
             '<span style="font-weight:bold;color:#02A699;">⭐ Lead Ready</span></div>' +
             '<div style="font-size:14px;font-weight:bold;">' + this._esc(lead.productName) + '</div>' +
+            '<div style="font-size:11px;color:#666;margin:4px 0;">🌍 ' + this._esc(lead.countryIso || 'Unknown') + '</div>' +
             '<div style="display:flex;gap:8px;margin-top:8px;">' +
             '<button style="flex:1;padding:8px;background:#02A699;color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600;" data-a="acq">✅ Acquire</button>' +
             '<button style="flex:1;padding:8px;background:#e8ecf1;color:#333;border:none;border-radius:4px;cursor:pointer;font-weight:600;" data-a="skip">✖ Skip</button></div>';
@@ -1749,6 +1968,13 @@ console.log('🔗 https://codenagpur.in');
         var merged = Object.assign({}, DEFAULT_CONFIG, newConfig || {});
         if (newConfig && newConfig.scoreWeights) merged.scoreWeights = Object.assign({}, DEFAULT_CONFIG.scoreWeights, newConfig.scoreWeights);
         if (newConfig && newConfig.scorePenalties) merged.scorePenalties = Object.assign({}, DEFAULT_CONFIG.scorePenalties, newConfig.scorePenalties);
+
+        merged.strictCountryMode = merged.strictCountryMode === true;
+        merged.allowedCountries = (merged.allowedCountries || ['IN']).map(function(x) {
+            return String(x).toUpperCase().trim();
+        }).filter(function(x) { return x; });
+        merged.strictCountryRejectUnknown = merged.strictCountryRejectUnknown !== false;
+
         this.config = merged;
         chrome.storage.local.set(merged);
 
@@ -1774,6 +2000,8 @@ console.log('🔗 https://codenagpur.in');
         if (merged.autoScroll && !this.navigator._running) this.navigator.start();
         else if (!merged.autoScroll && this.navigator._running) this.navigator.stop();
 
+        this.logger.info('Config updated. Rate limits: ' + merged.maxPerMinute + '/min, ' + merged.maxPerHour + '/hr');
+
         this._broadcastStatus();
         return Promise.resolve(true);
     };
@@ -1795,6 +2023,22 @@ console.log('🔗 https://codenagpur.in');
     Orchestrator.prototype.setPurchaseAction = function(a) { this.config.purchaseAction = a; this.actionAdapter.setPurchaseAction(a); chrome.storage.local.set({ purchaseAction: a }); };
     Orchestrator.prototype.setAutoScroll = function(e) { this.config.autoScroll = e; chrome.storage.local.set({ autoScroll: e }); if (e) this.navigator.start(); else this.navigator.stop(); };
 
+    Orchestrator.prototype.setStrictCountry = function(enabled, countries, rejectUnknown) {
+        this.config.strictCountryMode = enabled === true;
+        if (Array.isArray(countries)) {
+            this.config.allowedCountries = countries.map(function(c) { return String(c).toUpperCase().trim(); }).filter(function(c) { return c; });
+        }
+        if (rejectUnknown !== undefined) this.config.strictCountryRejectUnknown = rejectUnknown !== false;
+        chrome.storage.local.set({
+            strictCountryMode: this.config.strictCountryMode,
+            allowedCountries: this.config.allowedCountries,
+            strictCountryRejectUnknown: this.config.strictCountryRejectUnknown
+        });
+        this.logger.info('🌍 Strict country ' + (this.config.strictCountryMode ? 'ON' : 'OFF'));
+        this._broadcastStatus();
+        return Promise.resolve(true);
+    };
+
     Orchestrator.prototype.toggleSupabase = function(enabled) {
         var self = this;
         this._supabaseEnabled = enabled;
@@ -1815,9 +2059,6 @@ console.log('🔗 https://codenagpur.in');
         }
     };
 
-    // ============================================================
-    // DATA MANAGEMENT - DELEGATE TO SERVICE WORKER
-    // ============================================================
     Orchestrator.prototype.clearLocalDuplicateCache = function() {
         this.duplicateManager.clear();
         return Promise.resolve({ success: true, message: 'Duplicate cache cleared' });
@@ -1826,11 +2067,10 @@ console.log('🔗 https://codenagpur.in');
     Orchestrator.prototype.clearAllLocalData = function() {
         var self = this;
         return new Promise(function(resolve) {
-            chrome.storage.local.get(['keywords', 'mode', 'supabaseEnabled', 'scoreWeights', 'scorePenalties', 'preferredStates', 'preferredCountries', 'minScore', 'maxPerMinute', 'maxPerHour', 'maxPerDay', 'maxPerSession', 'cooldownMs'], function(keep) {
+            chrome.storage.local.get(['keywords', 'mode', 'supabaseEnabled', 'scoreWeights', 'scorePenalties', 'preferredStates', 'preferredCountries', 'minScore', 'maxPerMinute', 'maxPerHour', 'maxPerDay', 'maxPerSession', 'cooldownMs', 'strictCountryMode', 'allowedCountries', 'strictCountryRejectUnknown'], function(keep) {
                 chrome.storage.local.clear(function() {
                     chrome.storage.local.set(keep, function() {
                         self.duplicateManager.clear();
-                        self.logger.info('🗑️ Local data cleared (kept config & keywords)');
                         resolve({ success: true });
                     });
                 });
@@ -1862,7 +2102,11 @@ console.log('🔗 https://codenagpur.in');
             scoreWeights: this.scorer.weights,
             scorePenalties: this.scorer.penalties,
             preferredStates: this.scorer.preferredStates,
-            preferredCountries: this.scorer.preferredCountries
+            preferredCountries: this.scorer.preferredCountries,
+            strictCountryMode: this.config.strictCountryMode,
+            allowedCountries: this.config.allowedCountries,
+            strictCountryRejectUnknown: this.config.strictCountryRejectUnknown,
+            countryBlocked: this.stats.countryBlocked
         };
     };
 
@@ -1879,11 +2123,11 @@ console.log('🔗 https://codenagpur.in');
     // ============================================================
     // INIT
     // ============================================================
-    if (window.__BUY_LEAD_ASSISTANT_V4__) {
+    if (window.__BUY_LEAD_ASSISTANT_V6__) {
         console.warn('Already initialized');
     } else {
-        window.__BUY_LEAD_ASSISTANT_V4__ = true;
-        console.log('🚀 IndiaMART BuyLead Assistant v4.9.0');
+        window.__BUY_LEAD_ASSISTANT_V6__ = true;
+        console.log('🚀 IndiaMART BuyLead Assistant v6.1.0');
 
         try {
             var reloadFlag = sessionStorage.getItem('bl_last_reload_flag');
@@ -1906,7 +2150,8 @@ console.log('🔗 https://codenagpur.in');
                 case 'SET_AUTO_MINIMIZE': orchestrator.setAutoMinimize(req.enabled); sendResponse({ success: true }); break;
                 case 'SET_CONFIRMATION_ANSWER': orchestrator.setConfirmationAnswer(req.answer); sendResponse({ success: true }); break;
                 case 'SET_PURCHASE_ACTION': orchestrator.setPurchaseAction(req.purchaseAction); sendResponse({ success: true }); break;
-                case 'SET_AUTO_SCROLL': orchestrator.setAutoScroll(req.enabled); sendResponse({ success: true, enabled: req.enabled }); break;
+                case 'SET_AUTO_SCROLL': orchestrator.setAutoScroll(req.enabled); sendResponse({ success: true }); break;
+                case 'SET_STRICT_COUNTRY': orchestrator.setStrictCountry(req.enabled, req.countries, req.rejectUnknown).then(function() { sendResponse({ success: true }); }); return true;
                 case 'TOGGLE_SUPABASE': orchestrator.toggleSupabase(req.enabled).then(function() { sendResponse({ success: true }); }); return true;
                 case 'EMERGENCY_STOP': orchestrator.emergencyStop().then(function() { sendResponse({ success: true }); }); return true;
                 case 'RESUME': orchestrator.resume().then(function() { sendResponse({ success: true }); }); return true;
@@ -1944,7 +2189,7 @@ console.log('🔗 https://codenagpur.in');
             return true;
         });
 
-        console.log('✅ Ready — v4.9.0 with RLS-safe counts + is_contacted-only dup cache');
+        console.log('✅ Ready — v6.1.0');
     }
 
 })();
