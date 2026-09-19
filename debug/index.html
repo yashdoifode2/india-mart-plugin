@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Debug - BuyLead Assistant</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Consolas', monospace; background: #0d0d1a; color: #e0e0e0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #1a1a2e; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-icon-img { width: 36px; height: 36px; object-fit: contain; border-radius: 8px; flex-shrink: 0; }
+        .header-text { display: flex; flex-direction: column; }
+        .header h1 { font-size: 20px; color: #02A699; line-height: 1.2; }
+        .header .subtitle { font-size: 11px; color: #666; margin-top: 2px; }
+        .header .status { font-size: 12px; color: #888; }
+        .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+        .controls select, .controls input { padding: 6px 10px; border-radius: 4px; border: 1px solid #333; background: #1a1a2e; color: #e0e0e0; font-size: 12px; }
+        .controls select:focus, .controls input:focus { outline: none; border-color: #02A699; }
+        .controls button { padding: 6px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; }
+        .btn-primary { background: #02A699; color: white; }
+        .btn-primary:hover { background: #018f88; }
+        .btn-danger { background: #ef7076; color: white; }
+        .btn-danger:hover { background: #e05a5f; }
+        .btn-secondary { background: #444; color: white; }
+        .btn-secondary:hover { background: #555; }
+        .stats-bar { display: flex; gap: 16px; margin-bottom: 12px; padding: 8px 12px; background: #1a1a2e; border-radius: 6px; font-size: 12px; }
+        .stats-bar span { color: #888; }
+        .stats-bar strong { color: #02A699; }
+        .log-container { background: #0d0d1a; border-radius: 8px; max-height: 72vh; overflow-y: auto; border: 1px solid #1a1a2e; }
+        .log-entry { padding: 6px 12px; border-bottom: 1px solid #1a1a2e; font-size: 12px; display: flex; align-items: flex-start; gap: 12px; font-family: 'Consolas', monospace; flex-wrap: wrap; }
+        .log-entry:hover { background: #1a1a2e; }
+        .log-level { font-weight: 700; min-width: 55px; text-align: center; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+        .level-TRACE { color: #666; background: #1a1a1a; }
+        .level-DEBUG { color: #8888cc; background: #1a1a2e; }
+        .level-INFO { color: #02A699; background: #0a2e2c; }
+        .level-WARN { color: #f5a623; background: #2e2410; }
+        .level-ERROR { color: #ef7076; background: #2e1012; }
+        .level-FATAL { color: #ff0000; background: #2e0000; }
+        .log-time { color: #666; font-size: 11px; min-width: 145px; flex-shrink: 0; }
+        .log-module { color: #888; min-width: 85px; flex-shrink: 0; font-size: 11px; }
+        .log-message { flex: 1; color: #e0e0e0; word-break: break-word; }
+        .log-data { color: #666; font-size: 10px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .empty { text-align: center; color: #666; padding: 40px; font-size: 14px; }
+        .empty-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+        .footer { margin-top: 16px; display: flex; justify-content: space-between; font-size: 11px; color: #666; }
+        .footer a { color: #02A699; text-decoration: none; cursor: pointer; }
+        .footer a:hover { text-decoration: underline; }
+        .credit { text-align: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #1a1a2e; font-size: 10px; color: #444; }
+        .credit a { color: #02A699; text-decoration: none; }
+        .credit a:hover { text-decoration: underline; }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: white; padding: 10px 20px; border-radius: 6px; font-size: 12px; z-index: 9999; max-width: 90%; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @keyframes fadeOutDown { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(20px); } }
+        .log-entry .expand-btn { background: none; border: none; color: #02A699; cursor: pointer; font-size: 10px; padding: 0 4px; }
+        .log-data-full { display: none; width: 100%; padding: 8px; margin-top: 4px; background: #1a1a2e; border-radius: 4px; font-size: 11px; color: #aaa; white-space: pre-wrap; word-break: break-all; }
+        .log-data-full.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <img src="../plugin.png" alt="BuyLead Assistant" class="header-icon-img" />
+            <div class="header-text">
+                <h1>🐞 Debug Logs</h1>
+                <span class="subtitle">BuyLead Assistant v4.0.0</span>
+            </div>
+        </div>
+        <div class="status">
+            <span id="logCount">0 entries</span>
+            <span style="margin-left:12px;color:#02A699;" id="liveIndicator">● LIVE</span>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <span>Total: <strong id="statTotal">0</strong></span>
+        <span>INFO: <strong id="statInfo">0</strong></span>
+        <span>WARN: <strong id="statWarn">0</strong></span>
+        <span>ERROR: <strong id="statError">0</strong></span>
+        <span>DEBUG: <strong id="statDebug">0</strong></span>
+    </div>
+
+    <div class="controls">
+        <select id="levelFilter">
+            <option value="ALL">All Levels</option>
+            <option value="TRACE">TRACE</option>
+            <option value="DEBUG">DEBUG</option>
+            <option value="INFO">INFO</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+            <option value="FATAL">FATAL</option>
+        </select>
+        <select id="moduleFilter">
+            <option value="ALL">All Modules</option>
+        </select>
+        <input type="text" id="searchFilter" placeholder="Search logs..." style="width:180px;">
+        <button class="btn-primary" id="applyFilter">Apply</button>
+        <button class="btn-secondary" id="clearFilter">Clear</button>
+        <button class="btn-secondary" id="refreshBtn">🔄 Refresh</button>
+        <button class="btn-secondary" id="autoRefreshBtn">⏸ Pause Auto</button>
+        <button class="btn-primary" id="exportBtn">📥 Export</button>
+        <button class="btn-danger" id="clearBtn">🗑 Clear</button>
+    </div>
+
+    <div class="log-container" id="logContainer">
+        <div class="empty">
+            <span class="empty-icon">📭</span>
+            Loading logs...
+        </div>
+    </div>
+
+    <div class="footer">
+        <span>Logs stored locally • Max 1000 entries</span>
+        <a id="backLink">← Back to Dashboard</a>
+    </div>
+
+    <div class="credit">
+        Developed by <a href="https://codenagpur.in" target="_blank">CodeNagpur.in</a>
+    </div>
+
+    <script src="debug.js"></script>
+</body>
+</html>

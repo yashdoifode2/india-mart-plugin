@@ -1,0 +1,52 @@
+{
+  "manifest_version": 2,
+  "name": "IndiaMART BuyLead Assistant",
+  "version": "4.0.0",
+  "description": "Smart BuyLead automation with full Supabase integration",
+  "permissions": [
+    "storage",
+    "tabs",
+    "alarms",
+    "notifications",
+    "https://seller.indiamart.com/*",
+    "https://zvhuromubukylsxrsfiz.supabase.co/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://seller.indiamart.com/bltxn/*"],
+      "js": ["src/supabase-service.js", "src/bundle.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "scripts": ["service-worker.js"],
+    "persistent": false
+  },
+  "browser_action": {
+    "default_popup": "popup/index.html",
+    "default_title": "BuyLead Assistant",
+    "default_icon": {
+      "16": "plugin.png",
+      "32": "plugin.png",
+      "48": "plugin.png",
+      "128": "plugin.png"
+    }
+  },
+  "icons": {
+    "16": "plugin.png",
+    "32": "plugin.png",
+    "48": "plugin.png",
+    "128": "plugin.png"
+  },
+  "web_accessible_resources": [
+    "plugin.png",
+    "config/index.html",
+    "debug/index.html"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "indiamart-buylead@assistant",
+      "strict_min_version": "109.0"
+    }
+  }
+}
